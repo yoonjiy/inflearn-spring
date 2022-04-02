@@ -1,5 +1,9 @@
 # 스프링 핵심 원리 이해
-[1. 객체 지향 설계와 스프링](#1.-객체-지향-설계와-스프링)
+[1. 객체 지향 설계와 스프링](#1-객체-지향-설계와-스프링)
+
+[2. 스프링 핵심 원리 이해 1 - 예제 만들기](#2-스프링-핵심-원리-이해-1---예제-만들기)
+
+[3. 스프링 핵심 원리 이해 2 - 객체 지향 원리 적용](#3-스프링-핵심-원리-이해-2---객체-지향-원리-적용)
 
 ## 1. 객체 지향 설계와 스프링
 
@@ -57,7 +61,92 @@
 - DI: 의존관계 주입
 - DI 컨테이너 제공
 
+***
+## 2. 스프링 핵심 원리 이해 1 - 예제 만들기
 
+### 비즈니스 요구사항과 설계
+- 회원
+  - 회원 기능: 가입, 조회
+  - 회원 엔티티: id, 이름, 등급(VIP, BASIC)
+  - `회원 데이터 저장소는 미확정`
+- 주문과 할인 정책
+  - 회원 등급에 따라 할인 정책을 적용
+  - `할인 정책은 정액 할인으로 할 지, 정율 할인으로 할 지 미확정` 
 
+### 회원, 주문, 할인 도메인 설계
+- 회원 도메인
+1) MemberService 인터페이스와 MemberServiceImpl 구현 객체
+2) MemberRepository 인터페이스와 MemoryMemberRepository, DbMemberRepository 구현 객체
 
+❗ 이때 MemberServiceImpl은 `private final MemberRepository memberRepository = new MemoryMemberRepository();` 와 같이 인터페이스 뿐 아니라 구현까지 모두 의존하고 있음
 
+- 주문 도메인
+1) OrderService 인터페이스와 OrderServiceImpl 구현 객체 -> 회원 조회, 할인 적용 두 가지 기능
+2) 회원 조회 - MemberRepository 인터페이스와 MemoryMemberRepository, DbMemberRepository 구현 객체
+3) 할인 적용 - DiscountPolicy 인터페이스와 FixDiscountPolicy, RateDiscountPolicy 구현 객체
+
+👍 **역할과 구현을 분리**해서 다형성을 적용한 설계. 자유로운 구현 객체의 조립(변경)이 가능해진다! 
+
+***
+## 3. 스프링 핵심 원리 이해 2 - 객체 지향 원리 적용
+
+### 문제점 발견
+
+✅ 역할과 구현을 충실하게 분리했다. 
+
+✅ 다형성을 활용해 인터페이스와 구현 객체를 분리했다.
+
+❌ 그런데...**OCP, DIP** 를 준수하지 않았다! ❌
+
+현재 OrderServiceImpl 코드를 살펴보자.
+
+```
+public class OrderServiceImpl implements OrderService{
+
+    private final MemberRepository memberRepository = new MemoryMemberRepository();
+    private final DiscountPolicy discountPolicy = new FixDiscountPolicy();
+```
+
+❗ DIP 위반: 주문 서비스 클라이언트(OrderServiceImpl)은 DisCountPolicy 인터페이스와 FixDiscountPolicy라는 구체 클래스에 모두 의존하고 있다. (MemberRepository도 마찬가지)
+
+❗ OCP 위반: 정액이 아닌 정율 할인 정책으로 기능을 확장해서 변경하려면 클라이언트 코드 역시 변경해야 한다.
+
+문제를 해결하려면? **인터페이스에만 의존하도록 설계를 변경하자!**
+
+```
+public class OrderServiceImpl implements OrderService{
+
+    private final MemberRepository memberRepository;
+    private final DiscountPolicy discountPolicy;
+```
+
+❓ 그런데 구현체가 없다. -> NPE가 발생하지 않으려면 클라이언트인 OrderServiceImpl에 **구현 객체를 대신 생성 및 주입**해주어야 한다!
+
+### 관심사의 분리
+- 구현 객체를 생성하고 연결하는 책임을 가지는 별도의 설정 클래스 AppConfig를 만든다. 
+- AppConfig는 실제 동작에 필요한 구현 객체를 생성해주고, 생성한 객체 인스턴스의 참조를 생성자를 통해서 주입해준다.
+  - MemberServiceImpl -> memoryMemberRepository
+  - OrderServiceImpl -> MemoryMemberRepository, FixDiscountPolicy
+
+```
+public class MemberServiceImpl implements MemberService{
+
+    private final MemberRepository memberRepository;
+
+    public MemberServiceImpl(MemberRepository memberRepository) {
+        this.memberRepository = memberRepository;
+    }
+```
+- 설계 변경으로 구체 객체가 아닌 추상화(인터페이스)에만 의존하고 있다. - DIP 준수
+- MemberServiceImpl은 생성자를 통해 어떤 구현 객체가 주입될 지 알 수 없고, 구현 객체의 생성과 주입은 오직 AppConfig가 담당해 결정한다.
+- MemberServiceImpl은 기능의 실행에만 집중하면 된다! 
+
+❓ 새로운 할인 정책을 적용하고 싶다면
+
+- AppConfig의 등장으로 애플리케이션은 **사용 영역**과 **구성 영역**으로 분리되었다.
+- FixDiscountPolicy를 RateDiscountPolicy로 변경하고 싶다면, 구성 영역만 변경하면 된다. 즉, 사용 영역은 전혀 영향을 받지 않는다. - OCP 준수
+
+### IoC 컨테이너, DI 컨테이너
+- AppConfig처럼 객체를 생성하고 관리하며 의존 관계를 연결해주는 것을 IoC 컨테이너 또는 DI 컨테이너라고 한다.
+- AppConfig를 스프링 기반으로 변경하려면 AppConfig에 @Configuration을, 각 메소드의 @Bean을 붙여 스프링 컨테이너에 빈으로 등록해주면 된다.
+- 이제 스프링 컨테이너 ApplicationContext에서 필요한 스프링 빈을 찾아 사용할 수 있다.
