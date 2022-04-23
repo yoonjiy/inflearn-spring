@@ -1,11 +1,16 @@
 package com.example.core.member;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
 public class MemberServiceImpl implements MemberService{
 
     //private final MemberRepository memberRepository = new MemoryMemberRepository(); //구체화에도 의존하고 있음. DIP 위반
 
     private final MemberRepository memberRepository;
 
+    @Autowired
     public MemberServiceImpl(MemberRepository memberRepository) {
         this.memberRepository = memberRepository;
     }
