@@ -7,7 +7,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-public class BeanLifeCyleTest {
+public class BeanLifeCycleTest {
     @Test
     public void lifeCycleTest(){
         ConfigurableApplicationContext ac = new AnnotationConfigApplicationContext(LifeCycleConfig.class);
@@ -17,7 +17,7 @@ public class BeanLifeCyleTest {
 
     @Configuration
     static class LifeCycleConfig{
-        @Bean
+        @Bean //(initMethod = "init", destroyMethod = "close") //destoryMethod는 안써도 알아서 추론해서(close, shutdown) 호출해줌.
         public NetworkClient networkClient(){
             NetworkClient networkClient = new NetworkClient();
             networkClient.setUrl("http://hello-spring.dev");
