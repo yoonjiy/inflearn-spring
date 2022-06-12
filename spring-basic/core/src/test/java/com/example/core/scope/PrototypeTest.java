@@ -9,7 +9,7 @@ import javax.annotation.PreDestroy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class prototypeTest {
+public class PrototypeTest {
     @Test
     public void prototypeBeanTest(){
         AnnotationConfigApplicationContext ac = new AnnotationConfigApplicationContext(PrototypeBean.class);
