@@ -9,10 +9,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LogDemoService {
     //requestURL과 같은 서비스와 상관없는 웹 정보는 컨트롤러 계층까지만 사용해야 한다.
-    private final ObjectProvider<MyLogger> myLoggerProvider;
+    //private final ObjectProvider<MyLogger> myLoggerProvider;
+    private final MyLogger myLogger;
 
     public void logic(String testId) {
-        MyLogger myLogger = myLoggerProvider.getObject();
+        //MyLogger myLogger = myLoggerProvider.getObject();
 
         myLogger.log("service id = " + testId);
     }
